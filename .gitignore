@@ -1,3 +1,4 @@
 .venv
 .DS_Store
 black.py
+__pycache__
