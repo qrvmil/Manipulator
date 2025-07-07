@@ -2,3 +2,5 @@
 .DS_Store
 black.py
 __pycache__
+/simulator/notes.md
+/simulator/ik/IK_README.md
