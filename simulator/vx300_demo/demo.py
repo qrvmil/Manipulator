@@ -2,6 +2,11 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 import time
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 from ik.ik_simple import qpos_from_site_pose_simple
 
 def print_robot_state(data, step=None):
@@ -81,7 +86,7 @@ def move_to_position(model, data, target_pos, target_quat=None, tolerance=1e-3):
 
 def main():
     
-    model = mujoco.MjModel.from_xml_path('model/scene.xml')
+    model = mujoco.MjModel.from_xml_path('../models/vx300/scene.xml')
     data = mujoco.MjData(model)
     
     mujoco.mj_resetDataKeyframe(model, data, 0)
