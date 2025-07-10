@@ -7,12 +7,12 @@ import mujoco as mj
 
 
 class VanillaRRT:
-    def __init__(self, qspace: mj.Model, q_start: tuple, q_goal: tuple, max_iter: int = 1500,
+    def __init__(self, qspace: mj.Model, q_start: tuple, q_goals: list[tuple], max_iter: int = 1500,
                   step_size: float = 0.03, goal_radius: float=0.5, goal_bias=0.2,
                     sampling_frequency: int=10, stop_if_reached=True, q_limits: tuple = None):
         self.qspace: mj.Model = qspace
         self.q_start: tuple = q_start
-        self.q_goal: tuple = q_goal
+        self.q_goals: list[tuple] = q_goals
         self.tree: list[Node] = [self.q_start]
         self.max_iter: int = max_iter
         self.completed_iterations = 0
@@ -21,7 +21,11 @@ class VanillaRRT:
         self.goal_bias = goal_bias
         self.sampling_frequency = sampling_frequency
         self.STOP_IF_REACHED = stop_if_reached
-        self.goal_node = Node(None)
+
+        # Parameters for goal nodes:
+        self.goal_nodes = [Node(q) for q in q_goals]
+        self.goal_node = self.get_nearest_goal_node(q_start)
+        self.q_goal = self.goal_node.q
 
         # Parameters for rtree (we need rtree to find NN and KNN):
         p = index.Property()
@@ -29,6 +33,9 @@ class VanillaRRT:
         self.vertex_rtree = index.Index(interleaved=True, properties=p)
         self.vertex_count = 0
         self.head = self.add_vertex(q_start, None)
+
+    def get_nearest_goal_node(self, q: tuple) -> Node:
+        return min(self.goal_nodes, key=lambda goal_node: self.dist(q, goal_node.q))
 
     def dist(self, q1, q2) -> float:
         return np.linalg.norm(np.array(q1) - np.array(q2))
@@ -106,12 +113,20 @@ class VanillaRRT:
             new_node = self.add_vertex(new_q, nearest_node, cost=nearest_node.cost + self.dist(new_q, nearest_node.q))
             self.completed_iterations += 1
     
-            
-            if np.linalg.norm([new_q - self.q_goal]) < self.goal_radius:
-                if new_node.cost < self.goal_node.cost or self.goal_node.cost == 0:
-                    self.goal_node = new_node
-                if self.STOP_IF_REACHED:
-                    break
+            for i in range(len(self.goal_nodes)):
+                if np.linalg.norm([new_q - self.goal_nodes[i].q]) < self.goal_radius:
+                    if new_node.cost < self.goal_nodes[i].cost or self.goal_nodes[i].cost == 0:
+                        self.goal_nodes[i] = new_node
+                    if self.STOP_IF_REACHED:
+                        break
 
-        return self.goal_node
+        return self.goal_nodes
+    
+    def return_path(self, goal_node: Node) -> list[tuple]:
+        path = []
+        while goal_node.parent:
+            path.append(goal_node.q)
+            goal_node = goal_node.parent
+        path.append(self.q_start)
+        return path[::-1]
         
