@@ -2,10 +2,7 @@ import numpy as np
 import random
 from rtree import index
 import random
-from shapely.geometry import LineString
-from utils.workspace import WorkSpace
 from utils.node import Node
-from utils.obstacles import RectangleObstacle, CircleObstacle, PolygonObstacle
 import mujoco as mj
 
 
