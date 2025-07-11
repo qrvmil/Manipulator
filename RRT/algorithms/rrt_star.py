@@ -1,30 +1,29 @@
 from .vanilla_rrt import VanillaRRT
-from utils.workspace import WorkSpace
 from utils.node import Node
 import numpy as np
+import mujoco as mj
+
+# NB! STOP_IF_REACHED should be false for RRT*, because we want to find the best path, not the first one
 
 
 class RRTStar(VanillaRRT):
-    def __init__ (self, workspace: WorkSpace, start: tuple, goal: tuple, max_iter: int = 1000, step_size: float = 0.03, goal_radius: float = 0.5, goal_bias=0.2, collision_check_points=10, rewire_cnt=1, stop_if_reached=True, visualisation=True):
-        super().__init__(workspace, start, goal, max_iter, step_size, goal_radius, goal_bias, collision_check_points, stop_if_reached, visualisation)
+    def __init__ (self, qspace: mj.Model, q_start: tuple, q_goal: tuple, max_iter: int = 1000, step_size: float = 0.03, goal_radius: float = 0.5, goal_bias=0.2, sampling_frequency=10, rewire_cnt=1, stop_if_reached=True, visualisation=True):
+        super().__init__(qspace, q_start, q_goal, max_iter, step_size, goal_radius, goal_bias, sampling_frequency, stop_if_reached, visualisation)
         self.rewire_cnt = rewire_cnt
 
-    def dist(self, point1, point2):
-        return np.linalg.norm(np.array(point1) - np.array(point2))
-
-    def cnt_path_cost(self, node1: Node, node2: Node):
+    def cnt_path_cost(self, node1: Node, node2: Node) -> float:
         cost = 0
         while node2 != node1:
             if node2.parent is None:
                 break
             current_node = node2.parent
-            cost += self.dist((node2.x, node2.y), (current_node.x, current_node.y))
+            cost += self.dist(node2.q, current_node.q)
             node2 = current_node
         return cost
     
-    def get_nearby_nodes_with_cost(self, point):
-        nearby_nodes = self.get_k_nearest_nodes(point, min(self.rewire_cnt, self.vertex_count))
-        nearby_nodes_cost = [(item.object.cost + self.dist((item.object.x, item.object.y), point), item.object) for
+    def get_nearby_nodes_with_cost(self, q: tuple) -> list[tuple[float, Node]]:
+        nearby_nodes = self.get_k_nearest_nodes(q, min(self.rewire_cnt, self.vertex_count))
+        nearby_nodes_cost = [(item.object.cost + self.dist(item.object.q, q), item.object) for
                   item in nearby_nodes]
         return nearby_nodes_cost
     

@@ -1,5 +1,5 @@
 class Node:
-    def __init__(self, q: list, cost=0, parent=None, children: list = None):
+    def __init__(self, q: list, cost=0, parent=None, children: list=[]):
         self.q = q
         self.parent = parent
         self.children = children
