@@ -1,5 +1,5 @@
 from .vanilla_rrt import VanillaRRT
-from utils.node import Node
+from .utils.node import Node
 import numpy as np
 import mujoco as mj
 
@@ -7,8 +7,11 @@ import mujoco as mj
 
 
 class RRTStar(VanillaRRT):
-    def __init__ (self, qspace: mj.Model, q_start: tuple, q_goal: tuple, max_iter: int = 1000, step_size: float = 0.03, goal_radius: float = 0.5, goal_bias=0.2, sampling_frequency=10, rewire_cnt=1, stop_if_reached=True, visualisation=True):
-        super().__init__(qspace, q_start, q_goal, max_iter, step_size, goal_radius, goal_bias, sampling_frequency, stop_if_reached, visualisation)
+    def __init__ (self, qspace: mj.MjModel, q_start: tuple, q_goals: list[tuple], joint_indices: list[int],
+                 robot_geom_ids: list[int], rewire_cnt: int=1, max_iter: int=1500,
+                  step_size: float = 0.03, goal_radius: float=0.5, goal_bias=0.2,
+                    sampling_frequency: int=10, stop_if_reached=True, q_limits: list[tuple] = None, data: mj.MjData = None):
+        super().__init__(qspace, q_start, q_goals, joint_indices, robot_geom_ids, max_iter, step_size, goal_radius, goal_bias, sampling_frequency, stop_if_reached, q_limits, data)
         self.rewire_cnt = rewire_cnt
 
     def cnt_path_cost(self, node1: Node, node2: Node) -> float:
@@ -30,41 +33,35 @@ class RRTStar(VanillaRRT):
     def rewire(self, new_node, nearby_nodes_with_cost):
         for cost, node in nearby_nodes_with_cost:
             curr_cost = node.cost
-            tent_cost = new_node.cost + self.dist((new_node.x, new_node.y), (node.x, node.y))
-            if tent_cost < curr_cost and self.is_collision_free((node.x, node.y), (new_node.x, new_node.y)):
+            tent_cost = new_node.cost + self.dist(new_node.q, node.q)
+            if tent_cost < curr_cost and self.is_collision_free_path(new_node.q, node.q):
                 node.parent = new_node
                 node.cost = tent_cost
                 
-    def choose_parent(self, point, nearby_nodes_with_cost):
+    def choose_parent(self, q, nearby_nodes_with_cost):
         min_cost = float('inf')
         best_parent = None
         
         for cost, node in nearby_nodes_with_cost:
-            if cost < min_cost and ((node.x, node.y) != point) and self.is_collision_free((node.x, node.y), point):
+            if cost < min_cost and (node.q != q) and self.is_collision_free_path(node.q, q):
                 min_cost = cost
                 best_parent = node
                 
         return best_parent
     
     def run_rrt_star(self):
-
-        if self.visualisation:
-            all_lines = []
-            self.setup_visualization()
-            self.frames.append([])
-
+        goal_reached = False
         for _ in range(self.max_iter):
             
-            
-            random_point = self.get_random_point()
-            nearest_node = self.get_nearest_node(random_point)
-            status, new_node = self.steer((nearest_node.x, nearest_node.y), random_point)
+            random_q = self.get_random_q()
+            nearest_node = self.get_nearest_node(random_q)
+            status, new_node = self.steer(nearest_node.q, random_q)
 
             # in case of collision
             while not status:
-                random_point = self.get_random_point()
-                nearest_node = self.get_nearest_node(random_point)
-                status, new_node = self.steer((nearest_node.x, nearest_node.y), random_point)
+                random_q = self.get_random_q()
+                nearest_node = self.get_nearest_node(random_q)
+                status, new_node = self.steer(nearest_node.q, random_q)
 
             nearest_nodes_with_cost = self.get_nearby_nodes_with_cost(new_node)
             best_parent = self.choose_parent(new_node, nearest_nodes_with_cost)
@@ -77,19 +74,16 @@ class RRTStar(VanillaRRT):
             self.rewire(new_node, nearest_nodes_with_cost)
             self.completed_iterations += 1
 
-            
-            if new_node.parent and self.visualisation:
-                line, = self.ax.plot([new_node.x, new_node.parent.x], 
-                                [new_node.y, new_node.parent.y], "-b")
-                all_lines.append(line)
-                self.frames.append(all_lines.copy())
-            
-            # check if we reached the goal
-            if np.linalg.norm([new_node.x - self.goal[0], new_node.y - self.goal[1]]) < self.goal_radius:
-                if new_node.cost < self.goal_node.cost or self.goal_node.cost == 0:
-                    self.goal_node = new_node
-                if self.stop_if_reached:
-                    break
+            for i in range(len(self.goal_nodes)):
+                if self.dist(new_node.q, self.goal_nodes[i].q) < self.goal_radius:
+                    if new_node.cost < self.goal_nodes[i].cost or self.goal_nodes[i].cost == 0:
+                        self.goal_nodes[i] = new_node
+                    if self.STOP_IF_REACHED:
+                        goal_reached = True
+            if goal_reached:
+                break
 
-        return self.goal_node
+        return self.goal_nodes
+    
+
         
