@@ -11,6 +11,119 @@ from RRT.algorithms.rrt_star import RRTStar
 
 import time
 
+# TODO: прописать нормально q_limits (через joint_ranges)
+
+def find_multiple_ik_solutions(model, data, site_name, target_pos, joint_indices, 
+                               num_attempts=10, tol=1e-6, max_steps=500, step_size=0.01):
+    """
+    Find multiple IK solutions by trying different starting configurations
+    
+    Args:
+        model: MuJoCo model
+        data: MuJoCo data  
+        site_name: name of the site to control
+        target_pos: target position [x, y, z]
+        joint_indices: indices of joints to optimize
+        num_attempts: number of different starting configurations to try
+        tol, max_steps, step_size: IK solver parameters
+        
+    Returns:
+        List of IKResult objects with different valid solutions
+    """
+    solutions = []
+    original_qpos = data.qpos.copy()
+    
+    joint_limits = [
+        (-2.96706, 2.96706),  # Joint 1
+        (-2.0944, 2.0944),    # Joint 2  
+        (-3.05433, 3.05433),  # Joint 3
+        (-2.0944, 2.0944),    # Joint 4
+        (-2.96706, 2.96706),  # Joint 5
+        (-2.0944, 2.0944),    # Joint 6
+        (-3.05433, 3.05433)   # Joint 7
+    ]
+    
+    print(f"🎯 Searching for multiple IK solutions...")
+    print(f"   Target position: {[round(x, 3) for x in target_pos]}")
+    
+    for attempt in range(num_attempts):
+        data.qpos[:] = original_qpos[:]
+        
+        if attempt == 0:
+            print(f"   Attempt {attempt + 1}: Using current configuration")
+        else:
+            for i, joint_idx in enumerate(joint_indices):
+                if i < len(joint_limits):
+                    low, high = joint_limits[i]
+                    data.qpos[joint_idx] = np.random.uniform(low, high)
+            print(f"   Attempt {attempt + 1}: Random start {[round(data.qpos[i], 2) for i in joint_indices]}")
+        
+        mujoco.mj_forward(model, data)
+        
+        try:
+            ik_result = qpos_from_site_pose_simple(
+                model=model,
+                data=data,
+                site_name=site_name,
+                target_pos=target_pos,
+                joint_indices=joint_indices,
+                tol=tol,
+                max_steps=max_steps,
+                step_size=step_size
+            )
+            
+            if ik_result.success:
+                is_new_solution = True
+                current_config = ik_result.qpos[joint_indices]
+                
+                for existing_solution in solutions:
+                    existing_config = existing_solution.qpos[joint_indices]
+                    
+                    joint_diff = np.linalg.norm(current_config - existing_config)
+                    if joint_diff < 0.1:
+                        is_new_solution = False
+                        break
+                
+                if is_new_solution:
+                    solutions.append(ik_result)
+            
+        except Exception as e:
+            print(f"IK error: {e}")
+    
+    data.qpos[:] = original_qpos[:]
+    mujoco.mj_forward(model, data)
+    return solutions
+
+
+def verify_ik_solutions(model, data, solutions, site_name, target_pos, joint_indices):
+    """
+    Verify that all IK solutions actually reach the target position
+    """
+    original_qpos = data.qpos.copy()
+    
+    for i, solution in enumerate(solutions):
+        for j, joint_idx in enumerate(joint_indices):
+            data.qpos[joint_idx] = solution.qpos[joint_idx]
+        
+        mujoco.mj_forward(model, data)
+        
+        site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, site_name)
+        current_pos = data.site_xpos[site_id].copy()
+        
+        pos_error = np.linalg.norm(current_pos - target_pos)
+        
+        print(f"Config #{i+1}: position error = {pos_error:.6f} mm")
+        print(f"Current: {[round(x, 3) for x in current_pos]}")
+        print(f"Target:  {[round(x, 3) for x in target_pos]}")
+        
+        if pos_error > 0.01:
+            print(f"BAD")
+        else:
+            print(f"GOOD")
+    
+    data.qpos[:] = original_qpos[:]
+    mujoco.mj_forward(model, data)
+
 
 def wait_for_position(model, data, target_q, joint_indices, tolerance=0.01, max_steps=1000, viewer=None, step_delay=0.005):
     """Wait until robot reaches target joint positions within tolerance"""
@@ -93,12 +206,14 @@ def main():
     
     joint_indices = list(range(7))
 
-    ik_result = qpos_from_site_pose_simple(
+    target_position = [0.08, 0.5, 0.8]
+    ik_solutions = find_multiple_ik_solutions(
         model=model_copy,
         data=data_copy,
         site_name=site_name,
-        target_pos=[0.08, 0.5, 0.8],
+        target_pos=target_position,
         joint_indices=joint_indices,
+        num_attempts=15,
         tol=1e-6,          
         max_steps=500,     
         step_size=0.01
@@ -107,11 +222,26 @@ def main():
     robot_geom_ids = get_robot_geom_ids(model, 'base')
     print("ROBOT GEOM IDS: \n", *robot_geom_ids)
 
-    target_q = ik_result.qpos[:7]
-    target_pos = data.site_xpos[0]
+    target_configs = []
+    if ik_solutions:
+        for i, ik_result in enumerate(ik_solutions):
+            target_q = ik_result.qpos[:7]
+            target_configs.append(target_q)
+    else:
+        ik_result = qpos_from_site_pose_simple(
+            model=model_copy,
+            data=data_copy,
+            site_name=site_name,
+            target_pos=target_position,
+            joint_indices=joint_indices,
+            tol=1e-6,          
+            max_steps=500,     
+            step_size=0.01
+        )
+        target_configs = [ik_result.qpos[:7]]
 
-    print("\nINITIAL JOINTS (robot only): ", data.qpos[:7])
-    print("TARGET JOINTS (robot only): ", target_q)
+    if ik_solutions:
+        verify_ik_solutions(model_copy, data_copy, ik_solutions, site_name, target_position, joint_indices)
 
     qlimits = [
     (-2.96706, 2.96706),
@@ -126,13 +256,13 @@ def main():
     rrt = RRTStar(
         model, 
         data.qpos[:7], 
-        [target_q], 
-        rewire_cnt=5,
+        target_configs,
+        rewire_cnt=10,
         q_limits=qlimits, 
         goal_radius=0.05,   
         goal_bias=0.5,      
         max_iter=8000,      
-        step_size=0.007 ,    
+        step_size=0.007,    
         sampling_frequency=20,  
         joint_indices=joint_indices,
         robot_geom_ids=robot_geom_ids,
@@ -140,9 +270,12 @@ def main():
     )
 
     start_collision_free = rrt.is_collision_free_q(data.qpos[:7])
-    goal_collision_free = rrt.is_collision_free_q(target_q)
-    print(f"   Start collision-free: {start_collision_free}")
-    print(f"   Goal collision-free: {goal_collision_free}")
+    print(f"Start collision-free: {start_collision_free}")
+    
+    print(f"Target configurations collision check:")
+    for i, target_q in enumerate(target_configs):
+        goal_collision_free = rrt.is_collision_free_q(target_q)
+        print(f"     Config #{i+1}: {'collision-free' if goal_collision_free else 'collision detected'}")
 
     goal_nodes = rrt.run_rrt()
     print(f"\n RRT Results:")
@@ -151,25 +284,33 @@ def main():
     print(f"   Goal nodes found: {len([n for n in goal_nodes if n.cost > 0])}")
 
     path = []
+    chosen_target_config = None
     
     for goal_node in goal_nodes:
-        nearest = rrt.get_nearest_node(goal_node.q)
-        print(nearest.q, "DIST: ", rrt.dist(nearest.q, goal_node.q))
-        print(rrt.is_collision_free_path(nearest.q, goal_node.q))
-        print()
         if goal_node.cost != 0:
             path = rrt.return_path(goal_node)
-            print(f"Found path with {len(path)} points")
+            chosen_target_config = goal_node.q
+            
+            target_index = -1
+            min_dist = float('inf')
+            for i, target_q in enumerate(target_configs):
+                dist = np.linalg.norm(np.array(goal_node.q) - np.array(target_q))
+                if dist < min_dist:
+                    min_dist = dist
+                    target_index = i
+            
+            print(f"{len(path)} points")
+            print(f"target configuration #{target_index + 1}")
+            print(f"target config: {[round(x, 3) for x in chosen_target_config]}")
+            print(f"distance to target: {min_dist:.6f}")
             break
 
     path = open('qpath.txt', 'r').readlines()
     path = [tuple(map(float, line.strip().split())) for line in path]
 
     modify_collision_parameters(model, margin=0, gap=-0.05, geom_indices=[61, 64])
-    
 
-    print(model.geom_margin[61])
-    print(model.geom_gap[61])
+    smoothed_path = rdp_nd([np.array(point) for point in path], 0.01)
 
     with mujoco.viewer.launch_passive(model, data, show_left_ui=False, show_right_ui=False) as viewer:
         
@@ -228,7 +369,7 @@ def main():
             time.sleep(trajectory_delay)  
 
         print("\nCARTESIAL FINAL POSITION: ", get_current_pose(model, data, site_name)[0])
-        
+
         try:
             while True:
                 mujoco.mj_step(model, data)

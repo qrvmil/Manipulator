@@ -2,6 +2,32 @@ import numpy as np
 import mujoco
 from collections import deque
 
+import numpy as np
+
+def perpendicular_distance(pt, start, end):
+    v = end - start
+    if np.allclose(v, 0):
+        return np.linalg.norm(pt - start)
+    t = np.dot(pt - start, v) / np.dot(v, v)
+    t = np.clip(t, 0.0, 1.0)
+    proj = start + t * v
+    return np.linalg.norm(pt - proj)
+
+def rdp_nd(points, epsilon):
+    if len(points) < 3:
+        return points
+
+    start, end = points[0], points[-1]
+    dists = [perpendicular_distance(pt, start, end) for pt in points[1:-1]]
+    idx_max = int(np.argmax(dists)) + 1
+    if dists[idx_max-1] > epsilon:
+        left  = rdp_nd(points[:idx_max+1], epsilon)
+        right = rdp_nd(points[idx_max:], epsilon)
+        return left[:-1] + right
+    else:
+        return [start, end]
+
+
 
 def print_robot_state(data, step=None):
     if step is not None:
