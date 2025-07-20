@@ -116,7 +116,6 @@ class VanillaRRT:
             
             if geom1_id in self.robot_geom_ids or geom2_id in self.robot_geom_ids:
                 collision_detected = True
-                # print(f"Collision detected between geom {geom1_id} and geom {geom2_id}")
                 break
 
         self.data.qpos[:] = prev_qpos
@@ -132,7 +131,7 @@ class VanillaRRT:
         v = self.dtheta(start, end)
         v_norm = np.sqrt(np.sum(v ** 2))
         
-        # If start and end are the same, path is trivially collision-free
+        
         if v_norm < 1e-10:
             self.set_qpos(self.q_start)
             mj.mj_forward(self.qspace, self.data)
