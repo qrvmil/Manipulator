@@ -7,20 +7,23 @@
     <worldbody>
 
         <!-- Red cube object -->
-        <body name="red_cube_01" pos="0.1 0.8 0.68">
+        <body name="red_cube_01" pos="-0.25 0.4 0.71">
             <joint type="free" />
-            <geom name="cube" type="box" size="0.08 0.08 0.08" material="red_cube" contype="1" conaffinity="1" friction="1 0.1 0.001"/>
-            <inertial pos="0 0 0" mass="0.05" diaginertia="10 10 10"/>
-        </body>
-
-        <body name="red_cube_02" pos="0.3 0.5 0.81">
-            <joint type="free" />
-                <geom name="cube2" type="box" size="0.08 0.08 0.2" material="red_cube" contype="1" conaffinity="1" friction="1 0.1 0.001" />
+                <geom name="cube1" type="box" size="0.05 0.05 0.1" material="red_cube" contype="1" conaffinity="1" friction="1 0.1 0.001" />
             <inertial pos="0 0 0" mass="15" diaginertia="10 10 10"/>
         </body>
 
+        <body name="red_cube_02" pos="0.1 0.4 0.75">
+            <joint type="free" />
+                <geom name="cube2" type="box" size="0.05 0.05 0.15" material="red_cube" contype="1" conaffinity="1" friction="1 0.1 0.001" />
+            <inertial pos="0 0 0" mass="15" diaginertia="10 10 10"/>
+        </body>
 
-        
+        <body name="red_cube_03" pos="0.45 0.4 0.81">
+            <joint type="free" />
+                <geom name="cube3" type="box" size="0.05 0.05 0.2" material="red_cube" contype="1" conaffinity="1" friction="1 0.1 0.001" />
+            <inertial pos="0 0 0" mass="15" diaginertia="10 10 10"/>
+        </body>
 
     </worldbody>
 

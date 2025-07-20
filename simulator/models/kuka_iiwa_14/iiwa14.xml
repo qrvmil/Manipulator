@@ -136,7 +136,7 @@
                     <inertial mass="1.2" pos="0 0 0.02" diaginertia="0.001 0.001 0.001"/>
                     <joint name="joint7" class="joint3"/>
                     <geom class="visual" mesh="link_7"/>
-                    <geom class="collision" size="0.06" pos="0 0 0.001" margin="0.03"/>
+                    <geom class="collision" size="0.06" pos="0 0 0.001" margin="0.01"/>
                     <site pos="0 0 0.045" name="attachment_site"/>
                   </body>
                 </body>
