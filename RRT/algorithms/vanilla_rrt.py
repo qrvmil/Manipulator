@@ -16,16 +16,11 @@ class VanillaRRT:
                   step_size: float = 0.03, goal_radius: float=0.5, goal_bias=0.2,
                     sampling_frequency: int=10, stop_if_reached=True, q_limits: list[tuple] = None, data: mj.MjData = None):
         self.qspace: mj.MjModel = qspace
-        
-        # Use provided data or create new one
         if data is not None:
-            # Create a copy of the provided data to preserve world state
             self.data: mj.MjData = mj.MjData(qspace)
-            # Copy the entire state from the provided data
             self.data.qpos[:] = data.qpos[:]
             self.data.qvel[:] = data.qvel[:]
             self.data.qacc[:] = data.qacc[:]
-            # Forward to update all dependent quantities
             mj.mj_forward(qspace, self.data)
         else:
             self.data: mj.MjData = mj.MjData(qspace)
@@ -38,10 +33,7 @@ class VanillaRRT:
         self.completed_iterations = 0
         
         
-        joint_ranges = [abs(limit[1] - limit[0]) for limit in q_limits]
-        avg_range = np.mean(joint_ranges)
-        self.step_size: float = avg_range * step_size
-        
+        self.step_size: float = step_size
         
         self.goal_radius = goal_radius  # use absolute goal_radius in radians
         
@@ -64,6 +56,11 @@ class VanillaRRT:
         self.vertex_rtree = index.Index(interleaved=True, properties=p)
         self.vertex_count = 0
         self.head = self.add_vertex(q_start, None)
+
+    def update_goal_nodes(self):
+        self.goal_nodes = [Node(q) for q in self.q_goals]
+        self.goal_node = self.get_nearest_goal_node(self.q_start)
+        self.q_goal = self.goal_node.q
 
 
     def dtheta(self, q1, q2) -> np.array:
@@ -158,7 +155,6 @@ class VanillaRRT:
         v = self.dtheta(start, end)
         v_norm = np.sqrt(np.sum(v ** 2))
         
-        # If start and end are the same, return start position as steered point
         if v_norm < 1e-10:
             return True, start
             
@@ -179,7 +175,6 @@ class VanillaRRT:
             nearest_node = self.get_nearest_node(random_q)
             status, new_q = self.steer(nearest_node.q, random_q)
 
-            # prevent infinite loop - limit collision retry attempts
             collision_retries = 0
             max_collision_retries = 50
             
@@ -189,7 +184,6 @@ class VanillaRRT:
                 status, new_q = self.steer(nearest_node.q, random_q)
                 collision_retries += 1
             
-            # skip this iteration if we couldn't find collision-free path
             if not status:
                 continue
 
@@ -215,12 +209,10 @@ class VanillaRRT:
         path.append(self.q_start)
         path = path[::-1]
 
-        # Write the path to a text file in the current working directory
         current_dir = os.getcwd()
         file_path = os.path.join(current_dir, 'qpath.txt')
         with open(file_path, 'w') as file:
             for q in path:
-                # Записываем только числа, разделенные пробелами
                 numbers = ' '.join(str(float(x)) for x in q)
                 file.write(numbers + '\n')
 

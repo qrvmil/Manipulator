@@ -43,7 +43,8 @@ class RRTStar(VanillaRRT):
         best_parent = None
         
         for cost, node in nearby_nodes_with_cost:
-            if cost < min_cost and (node.q != q) and self.is_collision_free_path(node.q, q):
+            if cost < min_cost and (not np.array_equal(node.q, q)) \
+                and self.is_collision_free_path(node.q, q):
                 min_cost = cost
                 best_parent = node
                 
@@ -67,8 +68,8 @@ class RRTStar(VanillaRRT):
             best_parent = self.choose_parent(new_node, nearest_nodes_with_cost)
             if best_parent is None:
                 continue
-            cost = best_parent.cost + self.dist((best_parent.x, best_parent.y), new_node)
-            new_node = self.add_vertex(new_node, best_parent, cost=best_parent.cost + self.dist((best_parent.x, best_parent.y), new_node))
+            cost = best_parent.cost + self.dist(best_parent.q, new_node)
+            new_node = self.add_vertex(new_node, best_parent, cost=cost)
             new_node.cost = cost
     
             self.rewire(new_node, nearest_nodes_with_cost)
