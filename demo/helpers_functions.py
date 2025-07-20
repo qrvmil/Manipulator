@@ -4,6 +4,78 @@ from collections import deque
 
 import numpy as np
 
+
+def modify_collision_parameters(model, margin=None, gap=None, geom_indices=None):
+    """
+    Modify collision detection parameters for specified geometries or all geometries
+    
+    Args:
+        model: MuJoCo model
+        margin: New margin value (if None, keep original)
+        gap: New gap value (if None, keep original)  
+        geom_names: List of geometry names to modify (if None, modify all)
+    """
+    
+    if geom_indices is None:
+        geom_indices = range(model.ngeom)
+        print(f"Changing collision parameters for all {model.ngeom} geometries")
+    
+    for geom_id in geom_indices:
+        original_margin = model.geom_margin[geom_id]
+        original_gap = model.geom_gap[geom_id]
+        
+        if margin is not None:
+            model.geom_margin[geom_id] = margin
+        if gap is not None:
+            model.geom_gap[geom_id] = gap
+            
+        print(f"  Geometry {geom_id}: margin {original_margin:.3f}→{model.geom_margin[geom_id]:.3f}, "
+              f"gap {original_gap:.3f}→{model.geom_gap[geom_id]:.3f}")
+    
+
+
+def is_collision_free_q(model, data, q, robot_geom_ids):
+    prev_qpos = data.qpos.copy()
+    data.qpos[:7] = q
+    mujoco.mj_forward(model, data)
+    
+    collision_detected = False
+    for i in range(data.ncon):
+        contact = data.contact[i]
+        geom1_id = contact.geom1
+        geom2_id = contact.geom2
+        
+        if geom1_id in robot_geom_ids or geom2_id in robot_geom_ids:
+            collision_detected = True
+            # print(f"Collision detected between geom {geom1_id} and geom {geom2_id}")
+            break
+
+    data.qpos[:] = prev_qpos
+    mujoco.mj_forward(model, data)
+    
+    return not collision_detected
+
+def expand_target_configs(model, data, robot_geom_ids, base_configs, 
+                          q_limits, 
+                          noise=0.1,   # радиус гауссовского шума, рад
+                          per_base=50  # сколько новых конфигов на каждую базовую
+                         ):
+    """
+    Создаём «облако» валидных целевых конфигураций вокруг уже найденных IK-решений.
+    rrt         – готовый экземпляр RRTStar (должен уметь проверять коллизии)
+    base_configs – список существующих q (len == nq)
+    q_limits    – список (min,max) на сустав
+    """
+    all_targets = list(base_configs)
+    for q_base in base_configs:
+        for _ in range(per_base):
+            q_new = np.array(q_base) + np.random.normal(0, noise, size=len(q_base))
+            for i, (lo, hi) in enumerate(q_limits):
+                q_new[i] = np.clip(q_new[i], lo, hi)
+            if is_collision_free_q(model, data, q_new, robot_geom_ids):
+                all_targets.append(tuple(q_new))
+    return all_targets
+
 def perpendicular_distance(pt, start, end):
     v = end - start
     if np.allclose(v, 0):
