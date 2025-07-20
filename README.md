@@ -1,8 +1,55 @@
 # Manipulator
 
-Здесь будут python-ноутбуки с реализаций различных алгоритмов  
+Проект по планированию движения роботов-манипуляторов с использованием алгоритмов **RRT (Rapidly-exploring Random Tree)** и **RRT*** в симуляторе MuJoCo.
 
-### Что уже есть (список будет обновляться):  
-- Реализация [RRT](https://github.com/qrvmil/Notebooks/blob/main/RRT/rrt_practice.ipynb)
-- Реализация [RRT*](https://github.com/qrvmil/Notebooks/blob/main/RRT/rrt_practice.ipynb)
-- [Визулизации](https://github.com/qrvmil/Notebooks/tree/main/RRT/gifs) алгоритмов выше
+## Основные компоненты
+
+- **RRT и RRT*** алгоритмы для планирования траекторий без коллизий
+- **Симулятор MuJoCo** с реалистичной физикой и визуализацией
+- **Обратная кинематика** для достижения целевых позиций
+
+## Демонстрация работы
+
+[![RRT Demo](https://img.youtube.com/vi/Yd9NEjKjm4U/0.jpg)](https://youtu.be/Yd9NEjKjm4U)
+
+**[🔗 Смотреть демонстрацию работы RRT](https://youtu.be/Yd9NEjKjm4U)**
+
+## Поддерживаемые роботы
+
+- **KUKA iiwa 14** 
+
+## Алгоритмы
+
+### RRT (Rapidly-exploring Random Tree)
+- Быстрое исследование конфигурационного пространства
+- Вероятностная полнота
+- Эффективность в высокоразмерных пространствах
+
+### RRT* (RRT Star) 
+- Асимптотическая оптимальность
+- Переподключение узлов для улучшения пути
+- Сходимость к оптимальному решению
+
+## Структура проекта
+
+```
+Manipulator/
+├── RRT/                          # Алгоритмы планирования
+│   ├── algorithms/
+│   │   ├── vanilla_rrt.py        # Базовый RRT
+│   │   ├── rrt_star.py          # RRT* с оптимизацией
+│   │   └── utils/node.py        # Узлы дерева
+│   ├── gifs/                    # Визуализации алгоритмов
+│   └── rrt_practice.ipynb       # Jupyter ноутбук с примерами
+├── simulator/                   # MuJoCo симулятор
+│   ├── models/                  # Модели роботов
+│   │   ├── kuka_iiwa_14/       # KUKA iiwa 14
+│   │   └── vx300/              # ViperX 300
+│   └── ik/                     # Обратная кинематика
+└── demo/                       # Демонстрации
+    ├── simple_movement/        # Движение по траектории
+    └── helpers_functions.py    # Вспомогательные функции
+```
+
+---
+
