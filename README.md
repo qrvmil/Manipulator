@@ -10,7 +10,7 @@
 
 ## Демонстрация работы
 
-[![RRT Demo](https://img.youtube.com/vi/U0jLNqwuZgs/0.jpg)](https://youtu.be/U0jLNqwuZgs)
+[![image info](https://github.com/qrvmil/Manipulator/blob/main/demo/simple_movement/IMG_7276.gif)](https://youtu.be/U0jLNqwuZgs)
 
 **[🔗 Смотреть демонстрацию работы RRT](https://youtu.be/U0jLNqwuZgs)**
 
