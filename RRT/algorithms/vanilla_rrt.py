@@ -92,7 +92,8 @@ class VanillaRRT:
     def get_random_q(self) -> tuple:
         goal_bias_condition = np.random.uniform(0, 1)
         if goal_bias_condition < self.goal_bias:
-            q = self.q_goal
+            ind = random.randrange(0, len(self.q_goals))
+            q = self.q_goals[ind]
         else:
             q = tuple(random.uniform(dimension[0], dimension[1]) for dimension in self.q_limits)
         return q
