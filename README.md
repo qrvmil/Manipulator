@@ -10,9 +10,9 @@
 
 ## Демонстрация работы
 
-[![RRT Demo](https://img.youtube.com/vi/Yd9NEjKjm4U/0.jpg)](https://youtu.be/Yd9NEjKjm4U)
+[![RRT Demo](https://img.youtube.com/vi/U0jLNqwuZgs/0.jpg)](https://youtu.be/U0jLNqwuZgs)
 
-**[🔗 Смотреть демонстрацию работы RRT](https://youtu.be/Yd9NEjKjm4U)**
+**[🔗 Смотреть демонстрацию работы RRT](https://youtu.be/U0jLNqwuZgs)**
 
 ## Поддерживаемые роботы
 
