@@ -1,0 +1,42 @@
+name: "KUKA iiwa14"
+description: "KUKA iiwa 14 R820 - 7 DOF collaborative robot"
+
+# Основные параметры
+dof: 7
+robot_base: "base"
+attachment_site: "attachment_site"
+
+# Ограничения суставов (радианы)
+joint_limits:
+  - [-2.96706, 2.96706]   # Joint 1: ±170°
+  - [-2.0944, 2.0944]     # Joint 2: ±120°  
+  - [-3.05433, 3.05433]   # Joint 3: ±175°
+  - [-2.0944, 2.0944]     # Joint 4: ±120°
+  - [-2.96706, 2.96706]   # Joint 5: ±170°
+  - [-2.0944, 2.0944]     # Joint 6: ±120°
+  - [-3.05433, 3.05433]   # Joint 7: ±175°
+
+# Индексы управляемых суставов
+joint_indices: [0, 1, 2, 3, 4, 5, 6]
+
+# Параметры для обратной кинематики
+ik_params:
+  tolerance: 1e-6
+  max_steps: 500
+  step_size: 0.01
+  max_attempts: 100
+
+# Параметры планирования по умолчанию
+default_planning:
+  algorithm: "rrt_star"
+  max_iterations: 5000
+  step_size: 0.05
+  goal_radius: 0.1
+  goal_bias: 0.3
+  sampling_frequency: 4
+  rewire_count: 10
+  path_smoothing: true
+
+# Информация о модели MuJoCo
+mujoco:
+  default_scene: "simulator/models/kuka_iiwa_14/scene.xml" 

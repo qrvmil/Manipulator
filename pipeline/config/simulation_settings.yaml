@@ -1,0 +1,47 @@
+# Настройки симуляции
+
+# Параметры скорости движения
+speed_profiles:
+  very_slow:
+    interpolation_points: 15
+    steps_per_point: 80
+    step_delay: 0.03
+    description: "Очень медленно - для точных операций"
+    
+  slow:
+    interpolation_points: 10
+    steps_per_point: 50 
+    step_delay: 0.02
+    description: "Медленно - безопасная скорость"
+    
+  medium:
+    interpolation_points: 8
+    steps_per_point: 30
+    step_delay: 0.015
+    description: "Средняя скорость"
+    
+  fast:
+    interpolation_points: 5
+    steps_per_point: 15
+    step_delay: 0.008
+    description: "Быстро - только для пустого пространства"
+
+# Настройки MuJoCo симулятора
+mujoco_settings:
+  timestep: 0.002
+  solver: "PGS"  # PGS, CG, Newton
+  iterations: 50
+  tolerance: 1e-10
+
+# Параметры визуализации
+visualization:
+  show_left_ui: false
+  show_right_ui: false
+  camera_mode: "free"
+  lighting: "auto"
+  
+# Настройки записи
+recording:
+  fps: 30
+  format: "mp4"  # mp4, gif
+  quality: "high"  # low, medium, high

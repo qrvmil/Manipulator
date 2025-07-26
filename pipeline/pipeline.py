@@ -1,0 +1,233 @@
+import sys
+import os
+from pathlib import Path
+import time
+import mujoco
+import numpy as np
+from typing import List, Tuple, Dict, Any, Optional, Union
+from utils.config_loader import ConfigLoader, get_robot_config, get_simulation_config
+from utils.helpers_functoins import get_robot_geom_ids, is_collision_free_q, expand_target_configs, rdp_nd, forward_kinematics
+
+current_dir = Path(__file__).parent
+sys.path.append(str(current_dir))
+sys.path.append(str(current_dir.parent))
+
+from simulator.ik.ik_simple import qpos_from_site_pose_simple
+from RRT.algorithms.rrt_star import RRTStar
+
+# 1. add target orientation
+# 2. add rrt and ik parametres 
+# 3. path post-processing
+# 4. whole path control visualization
+# 5. save path file to dirctrory output + unique name
+# 7. delete temprorary qpath.txt file
+
+
+class Pipeline:
+
+    def __init__(self, robot_name: str, config_root: Optional[str] = None):
+        self.robot_name = robot_name
+        self.config_loader = ConfigLoader(config_root)
+        self.robot_config = self.config_loader.load_robot_config(robot_name)
+        self.simulation_config = self.config_loader.load_simulation_config()
+
+        scene_path = current_dir.parent / self.robot_config['mujoco']['default_scene']
+        self.model = mujoco.MjModel.from_xml_path(str(scene_path))
+        self.data = mujoco.MjData(self.model)
+        self.current_targets = []
+        self.target_site = self.robot_config['attachment_site']
+
+    def set_targets(self, targets: List[List[float]]):
+        self.current_targets = targets
+    
+    def _solve_inverse_kinematics(self, target_pos: List[float]):
+        scene_path = current_dir.parent / self.robot_config['mujoco']['default_scene']
+        model_copy = mujoco.MjModel.from_xml_path(str(scene_path))
+        data_copy = mujoco.MjData(model_copy)
+        solutions = []
+        original_qpos = data_copy.qpos.copy()
+        for attempt in range(100):
+            data_copy.qpos[:] = original_qpos[:]
+        
+        
+            if attempt != 0:
+                for i, joint_idx in enumerate(self.robot_config['joint_indices']):
+                    if i < len(self.robot_config['joint_limits']):
+                        low, high = self.robot_config['joint_limits'][i]
+                        data_copy.qpos[joint_idx] = np.random.uniform(low, high)
+                
+            
+            mujoco.mj_forward(model_copy, data_copy)
+            
+            
+            ik_result = qpos_from_site_pose_simple(
+                model=model_copy,
+                data=data_copy,
+                site_name=self.target_site,
+                target_pos=target_pos,
+                target_quat=np.array([0.0, 1.0, 0.0, 0.0]), #!!!!!!!!!!!!!!!!!!
+                joint_indices=self.robot_config['joint_indices'],
+                tol=float(self.robot_config['ik_params']['tolerance']),
+                max_steps=int(self.robot_config['ik_params']['max_steps']),
+                step_size=float(self.robot_config['ik_params']['step_size'])
+            )
+
+            if ik_result.success:
+                is_new_solution = True
+                current_config = ik_result.qpos[self.robot_config['joint_indices']]
+                
+                for existing_solution in solutions:
+                    existing_config = existing_solution.qpos[self.robot_config['joint_indices']]
+                    
+                    joint_diff = np.linalg.norm(current_config - existing_config)
+                    if joint_diff < 0.1:
+                        is_new_solution = False
+                        break
+                
+                if is_new_solution:
+                    solutions.append(ik_result)
+
+        self.data.qpos[:] = original_qpos[:]
+        mujoco.mj_forward(self.model, self.data)
+        solutions = [solution.qpos[self.robot_config['joint_indices']] for solution in solutions]
+        return solutions
+
+    def plan_one_path(self, start_pose: List[float], target_pos: List[float]):
+        scene_path = current_dir.parent / self.robot_config['mujoco']['default_scene']
+        model_copy = mujoco.MjModel.from_xml_path(str(scene_path))
+        data_copy = mujoco.MjData(model_copy)
+        
+        # Устанавливаем стартовую позицию в модель
+        data_copy.qpos[self.robot_config['joint_indices']] = start_pose
+        mujoco.mj_forward(model_copy, data_copy)
+        
+        robot_geom_ids = get_robot_geom_ids(self.model, self.robot_config['robot_base'])
+        solutions = self._solve_inverse_kinematics(target_pos)
+        target_qs = list()
+
+        for i, target_q in enumerate(solutions):
+            goal_collision_free = is_collision_free_q(model_copy, data_copy, target_q, robot_geom_ids)
+            print(f"Config #{i+1}: {'collision-free' if goal_collision_free else 'collision detected'}")
+            print(f"Config #{i+1}: {target_q}")
+            if goal_collision_free:
+                target_qs.append(target_q)
+
+        target_qs = expand_target_configs(self.model, self.data, robot_geom_ids, target_qs, self.robot_config['joint_limits'])
+        
+        rrt = RRTStar(
+            model_copy, 
+            start_pose,  # Используем переданную стартовую позицию
+            target_qs,
+            rewire_cnt=15,
+            q_limits=self.robot_config['joint_limits'], 
+            goal_radius=0.08,   
+            goal_bias=0.4,      
+            max_iter=20000,      
+            step_size=0.05,    
+            sampling_frequency=4,  
+            joint_indices=self.robot_config['joint_indices'],
+            robot_geom_ids=robot_geom_ids,
+            data=data_copy
+        )
+
+        goal_nodes = rrt.run_rrt_star()
+        print(f"\n RRT Results:")
+        print(f"   Completed iterations: {rrt.completed_iterations}")
+        print(f"   Tree size: {rrt.vertex_count}")
+        print(f"   Goal nodes found: {len([n for n in goal_nodes if n.cost > 0])}")
+
+        path = []
+        for goal_node in goal_nodes:
+            if goal_node.cost != 0:
+                path = rrt.return_path(goal_node)
+                chosen_target_config = goal_node.q
+                print(f'WE USE CONFIG {chosen_target_config}')
+                
+                target_index = -1
+                min_dist = float('inf')
+                for i, target_q in enumerate(target_qs):
+                    dist = np.linalg.norm(np.array(goal_node.q) - np.array(target_q))
+                    if dist < min_dist:
+                        min_dist = dist
+                        target_index = i
+                
+                print(f"{len(path)} points")
+                print(f"target configuration #{target_index + 1}")
+                print(f"target config: {[round(x, 3) for x in chosen_target_config]}")
+                print(f"distance to target: {min_dist:.6f}")
+                break
+
+        path = open('qpath.txt', 'r').readlines()
+        path = [tuple(map(float, line.strip().split())) for line in path]
+        return path
+    
+
+    def plan_path(self):
+
+        robot_geom_ids = get_robot_geom_ids(self.model, self.robot_config['robot_base'])
+        path = []
+        for i, pos in enumerate(self.current_targets):
+            if i == 0:
+                new_path = self.plan_one_path(self.data.qpos[self.robot_config['joint_indices']], pos)
+            else:
+                new_path = self.plan_one_path(path[-1], pos)
+
+            path += new_path
+
+        with open("final_path.txt", "w") as f:
+            for q in path:
+                f.write(" ".join(map(str, q)) + "\n")
+
+        return path
+        
+
+
+    def run_simulation(self):
+        path = open('final_path.txt', 'r').readlines()
+        path = [tuple(map(float, line.strip().split())) for line in path]
+        # path_arrays = [np.array(point) for point in path]  
+        # simplified_path = rdp_nd(path_arrays, 0.01)
+        # path = [tuple(point) for point in simplified_path] 
+
+
+        # model.opt.timestep = 0.002
+        # model.opt.solver = mujoco.mjtSolver.mjSOL_PGS
+        # model.opt.iterations = 75
+
+        for i in range(min(len(self.data.ctrl), self.model.nq)):
+            self.data.ctrl[i] = self.data.qpos[i]
+        #mujoco.mj_forward(self.model, self.data)
+
+        with mujoco.viewer.launch_passive(self.model, self.data, show_left_ui=False, show_right_ui=False) as viewer:
+            viewer.sync()
+            time.sleep(0.2)
+            
+            steps_per_point = 25      
+            step_delay = 0.01       
+            
+            
+            current_step = 0
+            
+            for i, target_point in enumerate(path):
+                self.data.qpos[self.robot_config['joint_indices']] = target_point
+                mujoco.mj_forward(self.model, self.data)
+                viewer.sync()
+                time.sleep(0.2)
+
+                # data.ctrl[joint_indices] = target_point
+                
+                # for step in range(steps_per_point):
+                #     mujoco.mj_step(model, data)
+                #     viewer.sync()
+                #     current_step += 1
+                #     time.sleep(step_delay)
+            
+            try:
+                while True:
+                    # mujoco.mj_step(model, data)
+                    viewer.sync()
+                    time.sleep(0.01)
+            except KeyboardInterrupt:
+                print("Done")
+                print("FINAL CARTESIAN POSITION: ", forward_kinematics(self.model, path[-1], self.robot_config['attachment_site'])[0])
+                print("FINAL JOINTS: ", self.data.qpos[:7])
