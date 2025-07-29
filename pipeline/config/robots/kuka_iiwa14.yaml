@@ -25,16 +25,18 @@ ik_params:
   max_steps: 500
   step_size: 0.01
   max_attempts: 100
+  orientation: [0, 1, 0, 0]
 
 # Параметры планирования по умолчанию
 default_planning:
   algorithm: "rrt_star"
-  max_iterations: 5000
+  max_iterations: 20000
   step_size: 0.05
-  goal_radius: 0.1
-  goal_bias: 0.3
+  goal_radius: 0.08
+  goal_bias: 0.4
+  step_size: 0.05
   sampling_frequency: 4
-  rewire_count: 10
+  rewire_count: 15
   path_smoothing: true
 
 # Информация о модели MuJoCo

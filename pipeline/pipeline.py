@@ -4,6 +4,8 @@ from pathlib import Path
 import time
 import mujoco
 import numpy as np
+import uuid
+from datetime import datetime
 from typing import List, Tuple, Dict, Any, Optional, Union
 from utils.config_loader import ConfigLoader, get_robot_config, get_simulation_config
 from utils.helpers_functoins import get_robot_geom_ids, is_collision_free_q, expand_target_configs, rdp_nd, forward_kinematics
@@ -15,12 +17,8 @@ sys.path.append(str(current_dir.parent))
 from simulator.ik.ik_simple import qpos_from_site_pose_simple
 from RRT.algorithms.rrt_star import RRTStar
 
-# 1. add target orientation
-# 2. add rrt and ik parametres 
 # 3. path post-processing
 # 4. whole path control visualization
-# 5. save path file to dirctrory output + unique name
-# 7. delete temprorary qpath.txt file
 
 
 class Pipeline:
@@ -36,6 +34,8 @@ class Pipeline:
         self.data = mujoco.MjData(self.model)
         self.current_targets = []
         self.target_site = self.robot_config['attachment_site']
+
+        self.final_path_file = None
 
     def set_targets(self, targets: List[List[float]]):
         self.current_targets = targets
@@ -58,19 +58,31 @@ class Pipeline:
                 
             
             mujoco.mj_forward(model_copy, data_copy)
-            
-            
-            ik_result = qpos_from_site_pose_simple(
+
+            if 'orientation' in self.robot_config['ik_params'].keys():
+                target_quat = self.robot_config['ik_params']['orientation']
+                ik_result = qpos_from_site_pose_simple(
                 model=model_copy,
                 data=data_copy,
                 site_name=self.target_site,
                 target_pos=target_pos,
-                target_quat=np.array([0.0, 1.0, 0.0, 0.0]), #!!!!!!!!!!!!!!!!!!
+                target_quat=target_quat,
                 joint_indices=self.robot_config['joint_indices'],
                 tol=float(self.robot_config['ik_params']['tolerance']),
                 max_steps=int(self.robot_config['ik_params']['max_steps']),
                 step_size=float(self.robot_config['ik_params']['step_size'])
             )
+            else:
+                ik_result = qpos_from_site_pose_simple(
+                    model=model_copy,
+                    data=data_copy,
+                    site_name=self.target_site,
+                    target_pos=target_pos,
+                    joint_indices=self.robot_config['joint_indices'],
+                    tol=float(self.robot_config['ik_params']['tolerance']),
+                    max_steps=int(self.robot_config['ik_params']['max_steps']),
+                    step_size=float(self.robot_config['ik_params']['step_size'])
+                )
 
             if ik_result.success:
                 is_new_solution = True
@@ -112,19 +124,26 @@ class Pipeline:
             if goal_collision_free:
                 target_qs.append(target_q)
 
-        target_qs = expand_target_configs(self.model, self.data, robot_geom_ids, target_qs, self.robot_config['joint_limits'])
+        # target_qs = expand_target_configs(self.model, self.data, robot_geom_ids, target_qs, self.robot_config['joint_limits'])
+        
+        rewire_cnt = self.robot_config['default_planning'].get('rewire_count', 15)
+        goal_radius = self.robot_config['default_planning'].get('goal_radius', 0.08)
+        goal_bias = self.robot_config['default_planning'].get('goal_bias', 0.4)
+        max_iter = self.robot_config['default_planning'].get('max_iterations', 20000)
+        step_size = self.robot_config['default_planning'].get('step_size', 0.05)
+        sampling_frequency = self.robot_config['default_planning'].get('sampling_frequency', 4)
         
         rrt = RRTStar(
             model_copy, 
-            start_pose,  # Используем переданную стартовую позицию
+            start_pose,  
             target_qs,
-            rewire_cnt=15,
+            rewire_cnt=rewire_cnt,
             q_limits=self.robot_config['joint_limits'], 
-            goal_radius=0.08,   
-            goal_bias=0.4,      
-            max_iter=20000,      
-            step_size=0.05,    
-            sampling_frequency=4,  
+            goal_radius=goal_radius,   
+            goal_bias=goal_bias,      
+            max_iter=max_iter,      
+            step_size=step_size,    
+            sampling_frequency=sampling_frequency,  
             joint_indices=self.robot_config['joint_indices'],
             robot_geom_ids=robot_geom_ids,
             data=data_copy
@@ -159,6 +178,13 @@ class Pipeline:
 
         path = open('qpath.txt', 'r').readlines()
         path = [tuple(map(float, line.strip().split())) for line in path]
+
+        try:
+            os.remove('qpath.txt')
+            print("Temporary file qpath.txt deleted")
+        except FileNotFoundError:
+            pass
+            
         return path
     
 
@@ -174,25 +200,48 @@ class Pipeline:
 
             path += new_path
 
-        with open("final_path.txt", "w") as f:
+        outputs_dir = current_dir.parent / "outputs"
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_code = str(uuid.uuid4())[:8]  
+        filename = f"final_path_{timestamp}_{unique_code}.txt"
+        file_path = outputs_dir / filename
+        
+        with open(file_path, "w") as f:
             for q in path:
                 f.write(" ".join(map(str, q)) + "\n")
-
+        
+        print(f"Path saved to: {file_path}")
+        
+        self.final_path_file = file_path
+        
         return path
         
 
 
     def run_simulation(self):
-        path = open('final_path.txt', 'r').readlines()
+            
+        path_file = self.final_path_file
+        path = open(path_file, 'r').readlines()
         path = [tuple(map(float, line.strip().split())) for line in path]
         # path_arrays = [np.array(point) for point in path]  
         # simplified_path = rdp_nd(path_arrays, 0.01)
         # path = [tuple(point) for point in simplified_path] 
 
-
-        # model.opt.timestep = 0.002
-        # model.opt.solver = mujoco.mjtSolver.mjSOL_PGS
-        # model.opt.iterations = 75
+        mujoco_settings = self.simulation_config['mujoco_settings']
+        self.model.opt.timestep = mujoco_settings['timestep']
+        
+        solver_name = mujoco_settings['solver']
+        if solver_name == "PGS":
+            self.model.opt.solver = 0
+        elif solver_name == "CG":
+            self.model.opt.solver = 1  
+        elif solver_name == "Newton":
+            self.model.opt.solver = 2
+        else:
+            self.model.opt.solver = 0  
+            
+        self.model.opt.iterations = mujoco_settings['iterations']
 
         for i in range(min(len(self.data.ctrl), self.model.nq)):
             self.data.ctrl[i] = self.data.qpos[i]
@@ -202,32 +251,52 @@ class Pipeline:
             viewer.sync()
             time.sleep(0.2)
             
-            steps_per_point = 25      
-            step_delay = 0.01       
+            step_delay = 0.005      
             
-            
-            current_step = 0
+            joint_indices = self.robot_config['joint_indices']
             
             for i, target_point in enumerate(path):
-                self.data.qpos[self.robot_config['joint_indices']] = target_point
-                mujoco.mj_forward(self.model, self.data)
-                viewer.sync()
-                time.sleep(0.2)
-
-                # data.ctrl[joint_indices] = target_point
+                print(f"Moving to waypoint {i+1}/{len(path)}")
                 
-                # for step in range(steps_per_point):
-                #     mujoco.mj_step(model, data)
-                #     viewer.sync()
-                #     current_step += 1
-                #     time.sleep(step_delay)
+                self.data.ctrl[joint_indices] = target_point
+                
+                target_tolerance = 0.05  
+                max_wait_steps = 500     
+                check_frequency = 10     
+                
+                step_count = 0
+                reached_target = False
+                
+                while not reached_target and step_count < max_wait_steps:
+                    for _ in range(check_frequency):
+                        mujoco.mj_step(self.model, self.data)
+                        viewer.sync()
+                        time.sleep(step_delay)
+                        step_count += 1
+                    
+                    current_position = self.data.qpos[joint_indices]
+                    position_error = np.linalg.norm(np.array(target_point) - current_position)
+                    
+                    if position_error < target_tolerance:
+                        reached_target = True
             
             try:
                 while True:
-                    # mujoco.mj_step(model, data)
+                    mujoco.mj_step(self.model, self.data)
                     viewer.sync()
                     time.sleep(0.01)
             except KeyboardInterrupt:
                 print("Done")
                 print("FINAL CARTESIAN POSITION: ", forward_kinematics(self.model, path[-1], self.robot_config['attachment_site'])[0])
                 print("FINAL JOINTS: ", self.data.qpos[:7])
+                self._cleanup_temp_files()
+    
+    def _cleanup_temp_files(self):
+        temp_files = ['qpath.txt']
+        
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except Exception as e:
+                pass
