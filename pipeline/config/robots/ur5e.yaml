@@ -1,23 +1,22 @@
-name: "KUKA iiwa14"
-description: "KUKA iiwa 14 R820 - 7 DOF collaborative robot"
+name: "UR5e"
+description: "Universal Robots UR5e - 6 DOF collaborative robot"
 
 # Основные параметры
-dof: 7
+dof: 6
 robot_base: "base"
 attachment_site: "attachment_site"
 
 # Ограничения суставов (радианы)
 joint_limits:
-  - [-2.96706, 2.96706]   # Joint 1: ±170°
-  - [-2.0944, 2.0944]     # Joint 2: ±120°  
-  - [-3.05433, 3.05433]   # Joint 3: ±175°
-  - [-2.0944, 2.0944]     # Joint 4: ±120°
-  - [-2.96706, 2.96706]   # Joint 5: ±170°
-  - [-2.0944, 2.0944]     # Joint 6: ±120°
-  - [-3.05433, 3.05433]   # Joint 7: ±175°
+  - [-6.28319, 6.28319]   # Joint 1: ±170°
+  - [-6.28319, 6.28319]     # Joint 2: ±120°  
+  - [-3.1415, 3.1415]   # Joint 3: ±175°
+  - [-6.28319, 6.28319]     # Joint 4: ±120°
+  - [-6.28319, 6.28319]   # Joint 5: ±170°
+  - [-6.28319, 6.28319]     # Joint 6: ±120°
 
 # Индексы управляемых суставов
-joint_indices: [0, 1, 2, 3, 4, 5, 6]
+joint_indices: [0, 1, 2, 3, 4, 5]
 
 # Параметры для обратной кинематики
 ik_params:
@@ -41,4 +40,4 @@ default_planning:
 
 # Информация о модели MuJoCo
 mujoco:
-  default_scene: "simulator/models/kuka_iiwa_14/scene.xml" 
+  default_scene: "simulator/models/ur5e/scene.xml" 
