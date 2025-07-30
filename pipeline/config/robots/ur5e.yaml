@@ -24,7 +24,7 @@ ik_params:
   max_steps: 500
   step_size: 0.01
   max_attempts: 100
-  orientation: [0, 1, 0, 0]
+  
 
 # Параметры планирования 
 default_planning:
