@@ -287,8 +287,8 @@ class Pipeline:
                     time.sleep(0.01)
             except KeyboardInterrupt:
                 print("Done")
-                print("FINAL CARTESIAN POSITION: ", forward_kinematics(self.model, path[-1], self.robot_config['attachment_site'])[0])
-                print("FINAL JOINTS: ", self.data.qpos[:7])
+                print("FINAL CARTESIAN POSITION: ", forward_kinematics(self.model, path[-1], self.robot_config['joint_indices'], self.robot_config['attachment_site'])[0])
+                print("FINAL JOINTS: ", self.data.qpos[self.robot_config['joint_indices']])
                 self._cleanup_temp_files()
     
     def _cleanup_temp_files(self):
