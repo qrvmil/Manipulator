@@ -5,6 +5,7 @@ from pathlib import Path
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir))
 sys.path.append(str(current_dir.parent))
+sys.path.append(str(current_dir.parent.parent))
 
 from pipeline import Pipeline
 
