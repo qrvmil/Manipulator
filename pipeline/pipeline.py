@@ -46,7 +46,7 @@ class Pipeline:
         data_copy = mujoco.MjData(model_copy)
         solutions = []
         original_qpos = data_copy.qpos.copy()
-        for attempt in range(100):
+        for attempt in range(500):
             data_copy.qpos[:] = original_qpos[:]
         
         
@@ -85,6 +85,9 @@ class Pipeline:
                 )
 
             if ik_result.success:
+                print(f"Найдено решение на попытке {attempt + 1}")
+                print(f"Конфигурация: {ik_result.qpos[self.robot_config['joint_indices']]}")
+                
                 is_new_solution = True
                 current_config = ik_result.qpos[self.robot_config['joint_indices']]
                 
@@ -98,7 +101,12 @@ class Pipeline:
                 
                 if is_new_solution:
                     solutions.append(ik_result)
+            else:
+                if attempt % 10 == 0:
+                    print(f"Попытка {attempt + 1}: решение не найдено")
 
+        print(f"\nВсего найдено {len(solutions)} уникальных решений")
+        
         self.data.qpos[:] = original_qpos[:]
         mujoco.mj_forward(self.model, self.data)
         solutions = [solution.qpos[self.robot_config['joint_indices']] for solution in solutions]
@@ -109,7 +117,7 @@ class Pipeline:
         model_copy = mujoco.MjModel.from_xml_path(str(scene_path))
         data_copy = mujoco.MjData(model_copy)
         
-        # Устанавливаем стартовую позицию в модель
+        
         data_copy.qpos[self.robot_config['joint_indices']] = start_pose
         mujoco.mj_forward(model_copy, data_copy)
         
@@ -118,7 +126,7 @@ class Pipeline:
         target_qs = list()
 
         for i, target_q in enumerate(solutions):
-            goal_collision_free = is_collision_free_q(model_copy, data_copy, target_q, robot_geom_ids)
+            goal_collision_free = is_collision_free_q(model_copy, data_copy, target_q, robot_geom_ids, self.robot_config['joint_indices'])
             print(f"Config #{i+1}: {'collision-free' if goal_collision_free else 'collision detected'}")
             print(f"Config #{i+1}: {target_q}")
             if goal_collision_free:
@@ -245,7 +253,6 @@ class Pipeline:
 
         for i in range(min(len(self.data.ctrl), self.model.nq)):
             self.data.ctrl[i] = self.data.qpos[i]
-        #mujoco.mj_forward(self.model, self.data)
 
         with mujoco.viewer.launch_passive(self.model, self.data, show_left_ui=False, show_right_ui=False) as viewer:
             viewer.sync()
