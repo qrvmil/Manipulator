@@ -9,6 +9,7 @@ from simulator.ik.ik_simple import qpos_from_site_pose_simple
 
 import numpy as np
 
+# THIS FUNC IS JUST FOR TESTING, DO NOT USE IT IN THE PIPELINE
 def find_multiple_ik_solutions(model, data, site_name, target_pos, joint_indices, 
                                num_attempts=100, tol=1e-6, max_steps=500, step_size=0.01):
     """
@@ -39,19 +40,16 @@ def find_multiple_ik_solutions(model, data, site_name, target_pos, joint_indices
         (-3.05433, 3.05433)   # Joint 7
     ]
     
-    print(f"   Target position: {[round(x, 3) for x in target_pos]}")
-    
     for attempt in range(num_attempts):
         data.qpos[:] = original_qpos[:]
         
         if attempt == 0:
-            print(f"   Attempt {attempt + 1}: Using current configuration")
+            pass
         else:
             for i, joint_idx in enumerate(joint_indices):
                 if i < len(joint_limits):
                     low, high = joint_limits[i]
                     data.qpos[joint_idx] = np.random.uniform(low, high)
-            print(f"   Attempt {attempt + 1}: Random start {[round(data.qpos[i], 2) for i in joint_indices]}")
         
         mujoco.mj_forward(model, data)
         
@@ -85,8 +83,6 @@ def find_multiple_ik_solutions(model, data, site_name, target_pos, joint_indices
             
         except Exception as e:
             print(f"IK error: {e}")
-
-    
     
     data.qpos[:] = original_qpos[:]
     mujoco.mj_forward(model, data)
@@ -165,7 +161,6 @@ def is_collision_free_q(model, data, q, robot_geom_ids):
         
         if geom1_id in robot_geom_ids or geom2_id in robot_geom_ids:
             collision_detected = True
-            # print(f"Collision detected between geom {geom1_id} and geom {geom2_id}")
             break
 
     data.qpos[:] = prev_qpos
@@ -173,17 +168,12 @@ def is_collision_free_q(model, data, q, robot_geom_ids):
     
     return not collision_detected
 
+# DO NOT USE THIS FUNCTION, IT IS NOT USED IN THE PIPELINE AND IS NOT TESTED
 def expand_target_configs(model, data, robot_geom_ids, base_configs, 
                           q_limits, 
-                          noise=0.1,   # радиус гауссовского шума, рад
-                          per_base=50  # сколько новых конфигов на каждую базовую
+                          noise=0.1,   
+                          per_base=50  
                          ):
-    """
-    Создаём «облако» валидных целевых конфигураций вокруг уже найденных IK-решений.
-    rrt         – готовый экземпляр RRTStar (должен уметь проверять коллизии)
-    base_configs – список существующих q (len == nq)
-    q_limits    – список (min,max) на сустав
-    """
     all_targets = list(base_configs)
     for q_base in base_configs:
         for _ in range(per_base):
@@ -245,19 +235,13 @@ def print_robot_state(data, step=None):
             print(f"  qpos[{i}] {name:12}: {current:7.4f} m (error: {error:+7.4f} m)")
 
 
-def print_robot_info(model, data):
-    """Выводит информацию о роботе"""
-    print(f"Количество суставов: {model.nq}")
-    print(f"Количество приводов: {model.nu}")
-    
-    print("\nДоступные сайты:")
+def print_robot_info(model):
     for i in range(model.nsite):
         site_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_SITE, i)
         if site_name:
             print(f"  {i}: {site_name}")
 
 def get_current_pose(model, data, site_name):
-    """Получает текущую позицию и ориентацию сайта"""
     mujoco.mj_forward(model, data)
     
     
@@ -305,55 +289,33 @@ def get_robot_geom_ids(model, root_body_name):
                 visited.add(c)
                 queue.append(c)
 
-    # For each body, get the geometry
     geom_ids = []
     for b in robot_bodies:
-        adr   = model.body_geomadr[b]   # first geom-index
-        cnt   = model.body_geomnum[b]   # how many geom's there
+        adr   = model.body_geomadr[b]  
+        cnt   = model.body_geomnum[b]   
         geom_ids.extend(range(adr, adr + cnt))
 
     return geom_ids
 
 
-def forward_kinematics(model, joint_angles, site_name='attachment_site'):
-    """
-    Calculates forward kinematics: by joint angles determines the position of the end-effector
-    
-    Args:
-        model: MuJoCo model
-        joint_angles: joint angles (list or numpy array of 7 elements for KUKA iiwa14)
-        site_name: name of the end-effector site (default: 'attachment_site')
-    
-    Returns:
-        tuple: (position, quaternion) 
-            - position: numpy array [x, y, z] in meters
-            - quaternion: numpy array [w, x, y, z] (quaternion orientation)
-    """
-    # Create a temporary copy of the data for calculations
+def forward_kinematics(model, joint_angles, joint_indices, site_name='attachment_site'):
     data_temp = mujoco.MjData(model)
     
-    # Set joint angles
     joint_angles = np.array(joint_angles)
-    if len(joint_angles) != 7:
-        raise ValueError(f"Expected 7 joint angles, got {len(joint_angles)}")
     
-    # Set joint positions (first 7 qpos for KUKA iiwa14)
-    data_temp.qpos[:7] = joint_angles
+    for i, joint_idx in enumerate(joint_indices):
+        data_temp.qpos[joint_idx] = joint_angles[i]
     
-    # Calculate forward kinematics
     mujoco.mj_forward(model, data_temp)
     
-    # Get the site ID
     try:
         site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, site_name)
     except:
         raise ValueError(f"Site '{site_name}' not found in the model")
     
-    # Get the position and orientation
     position = data_temp.site_xpos[site_id].copy()
     orientation_matrix = data_temp.site_xmat[site_id].copy().reshape(3, 3)
     
-    # Convert the rotation matrix to a quaternion
     quaternion = np.zeros(4)
     mujoco.mju_mat2Quat(quaternion, orientation_matrix.flatten())
     
