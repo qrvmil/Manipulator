@@ -148,9 +148,10 @@ def modify_collision_parameters(model, margin=None, gap=None, geom_indices=None)
     
 
 
-def is_collision_free_q(model, data, q, robot_geom_ids):
+def is_collision_free_q(model, data, q, robot_geom_ids, joint_indices):
     prev_qpos = data.qpos.copy()
-    data.qpos[:7] = q
+    for i, joint_idx in enumerate(joint_indices):
+        data.qpos[joint_idx] = q[i]
     mujoco.mj_forward(model, data)
     
     collision_detected = False
