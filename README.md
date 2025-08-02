@@ -2,6 +2,14 @@
 
 Проект по планированию движения роботов-манипуляторов с использованием алгоритмов **RRT (Rapidly-exploring Random Tree)** и **RRT*** в симуляторе MuJoCo.
 
+
+## Демонстрация работы
+| Робот | Демонстрация |
+|-------|--------------|
+| **KUKA iiwa14** | [![KUKA iiwa14 Demo](https://github.com/qrvmil/Manipulator/blob/main/demo/simple_movement/kuka_rrt.gif)](https://youtu.be/U0jLNqwuZgs) |
+| **Universal Robots UR5e** | [![UR5e Demo](https://github.com/qrvmil/Manipulator/blob/main/demo/simple_movement/kuka_rrt.gif)](https://youtu.be/xK5pJgHGtVE) |
+| **Franka FR3** | [![FR3 Demo](https://github.com/qrvmil/Manipulator/blob/main/demo/simple_movement/kuka_rrt.gif)](https://youtu.be/FXCSatCztHg) |
+
 ## Основные компоненты
 
 - **RRT и RRT*** алгоритмы для планирования траекторий без коллизий
@@ -97,15 +105,11 @@ if __name__ == "__main__":
 python your_script.py
 ```
 
-## Демонстрация работы
-
-[![image info](https://github.com/qrvmil/Manipulator/blob/main/demo/simple_movement/kuka_rrt.gif)](https://youtu.be/U0jLNqwuZgs)
-
-**[🔗 Смотреть демонстрацию работы RRT](https://youtu.be/U0jLNqwuZgs)**
-
 ## Поддерживаемые роботы
 
 - **KUKA iiwa 14** 
+- **Universal Robots UR5e**
+- **Franka FR3**
 
 ## Алгоритмы
 
@@ -136,7 +140,8 @@ Manipulator/
 │   │   │   ├── scene.xml        # Основная сцена
 │   │   │   ├── assets/          # 3D модели
 │   │   │   └── objects/         # Объекты сцены
-│   │   └── vx300/               # ViperX 300
+│   │   ├── ur5e/                # Universal Robots UR5e
+│   │   └── fr3/                 # Franka FR3
 │   └── ik/                      # Обратная кинематика
 ├── pipeline/                     # Основной пайплайн
 │   ├── config/                  # Конфигурационные файлы
