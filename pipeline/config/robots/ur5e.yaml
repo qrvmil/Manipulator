@@ -24,6 +24,7 @@ ik_params:
   max_steps: 500
   step_size: 0.01
   max_attempts: 100
+  repeat_times: 700
   
 
 # Параметры планирования 
@@ -34,7 +35,7 @@ default_planning:
   goal_radius: 0.08
   goal_bias: 0.4
   step_size: 0.05
-  sampling_frequency: 4
+  sampling_frequency: 5
   rewire_count: 15
   path_smoothing: true
 

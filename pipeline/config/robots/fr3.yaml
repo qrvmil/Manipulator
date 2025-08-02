@@ -1,0 +1,39 @@
+name: "fr3"
+description: "Fr3 - 7 DOF collaborative robot"
+
+dof: 7
+robot_base: "base"
+attachment_site: "attachment_site"
+
+joint_limits:
+  - [-2.7437, 2.7437]   # Joint 1: ±157.27°
+  - [-1.7837, 1.7837]   # Joint 2: ±102.23°
+  - [-2.9007, 2.9007]   # Joint 3: ±166.24°
+  - [-3.0421, -0.1518]  # Joint 4: [-174.32°, -8.70°]
+  - [-2.8065, 2.8065]   # Joint 5: ±160.84°
+  - [0.5445, 4.5169]    # Joint 6: [31.21°, 258.89°]
+  - [-3.0159, 3.0159]   # Joint 7: ±172.80°
+
+joint_indices: [0, 1, 2, 3, 4, 5, 6]
+
+ik_params:
+  tolerance: 1e-6
+  max_steps: 500
+  step_size: 0.01
+  max_attempts: 100
+  repeat_times: 700
+ 
+default_planning:
+  algorithm: "vanilla_rrt"     
+  max_iterations: 3000         
+  step_size: 0.3             
+  goal_radius: 0.3            
+  goal_bias: 0.8              
+  sampling_frequency: 2       
+  rewire_count: 3             
+  path_smoothing: true,
+  stop_if_reached: false
+
+
+mujoco:
+  default_scene: "simulator/models/fr3/scene.xml" 
