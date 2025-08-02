@@ -16,6 +16,7 @@ sys.path.append(str(current_dir.parent))
 
 from simulator.ik.ik_simple import qpos_from_site_pose_simple
 from RRT.algorithms.rrt_star import RRTStar
+from RRT.algorithms.vanilla_rrt import VanillaRRT
 
 # 3. path post-processing
 # 4. whole path control visualization
@@ -46,7 +47,7 @@ class Pipeline:
         data_copy = mujoco.MjData(model_copy)
         solutions = []
         original_qpos = data_copy.qpos.copy()
-        for attempt in range(500):
+        for attempt in range(self.robot_config['ik_params'].get('repeat_times', 100)):
             data_copy.qpos[:] = original_qpos[:]
         
         
@@ -141,23 +142,33 @@ class Pipeline:
         step_size = self.robot_config['default_planning'].get('step_size', 0.05)
         sampling_frequency = self.robot_config['default_planning'].get('sampling_frequency', 4)
         
-        rrt = RRTStar(
-            model_copy, 
-            start_pose,  
-            target_qs,
-            rewire_cnt=rewire_cnt,
-            q_limits=self.robot_config['joint_limits'], 
-            goal_radius=goal_radius,   
-            goal_bias=goal_bias,      
-            max_iter=max_iter,      
-            step_size=step_size,    
-            sampling_frequency=sampling_frequency,  
-            joint_indices=self.robot_config['joint_indices'],
-            robot_geom_ids=robot_geom_ids,
-            data=data_copy
-        )
+        print(f"RRT* parameters:")
+        print(f"  max_iterations: {max_iter}")
+        print(f"  step_size: {step_size}")
+        print(f"  goal_radius: {goal_radius}")
+        print(f"  goal_bias: {goal_bias}")
+        print(f"  rewire_count: {rewire_cnt}")
+        print(f"  sampling_frequency: {sampling_frequency}")
+        
 
+        rrt = RRTStar(
+                model_copy, 
+                start_pose,  
+                target_qs,
+                rewire_cnt=rewire_cnt,
+                q_limits=self.robot_config['joint_limits'], 
+                goal_radius=goal_radius,   
+                goal_bias=goal_bias,      
+                max_iter=max_iter,      
+                step_size=step_size,    
+                sampling_frequency=sampling_frequency,  
+                joint_indices=self.robot_config['joint_indices'],
+                robot_geom_ids=robot_geom_ids,
+                data=data_copy,
+                stop_if_reached=self.robot_config['default_planning'].get('stop_if_reached', True)
+        )
         goal_nodes = rrt.run_rrt_star()
+            
         print(f"\n RRT Results:")
         print(f"   Completed iterations: {rrt.completed_iterations}")
         print(f"   Tree size: {rrt.vertex_count}")
@@ -258,7 +269,7 @@ class Pipeline:
             viewer.sync()
             time.sleep(0.2)
             
-            step_delay = 0.005      
+            step_delay = 0.002      
             
             joint_indices = self.robot_config['joint_indices']
             
