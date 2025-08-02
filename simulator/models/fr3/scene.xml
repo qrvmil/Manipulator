@@ -16,8 +16,25 @@
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
   </asset>
 
+  <contact>
+    <pair geom1="front_object_table" geom2="cube1" solref="0.02 1" solimp="0.9 0.95 0.001" />
+    <pair geom1="front_object_table" geom2="cube2" solref="0.02 1" solimp="0.9 0.95 0.001" />
+    <pair geom1="front_object_table" geom2="cube3" solref="0.02 1" solimp="0.9 0.95 0.001" />
+  </contact>
+
   <worldbody>
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
   </worldbody>
+
+  <include file="objects/table.xml"/>
+  <include file="objects/cube.xml"/>
+
+  <keyframe>
+    <!-- 7 joints for FR3 + 7 DOF for each cube (pos[3] + quat[4]) * 3 cubes = 28 total -->
+    <key name="home" 
+         qpos="0 0 0 -1.57079 0 1.57079 -0.7853 -0.25 0.4 0.71 1 0 0 0 0.1 0.4 0.75 1 0 0 0 0.45 0.4 0.81 1 0 0 0" 
+         ctrl="0 0 0 -1.57079 0 1.57079 -0.7853"/>
+  </keyframe>
+
 </mujoco>
