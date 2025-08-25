@@ -4,11 +4,11 @@
 
 
 ## Демонстрация работы
-| Робот | Демонстрация |
-|-------|--------------|
-| **KUKA iiwa14** | [![KUKA iiwa14 Demo](https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/kuka-iiwa14/kuka_demo.mp4)](https://youtu.be/U0jLNqwuZgs) |
-| **Universal Robots UR5e** | [![UR5 Demo](https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/ur5e/ur5_demo.mp4)](https://youtu.be/xK5pJgHGtVE) |
-| **Franka FR3** | [![FR3 Demo](https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/fr3/fr3_demo.mp4)](https://youtu.be/FXCSatCztHg) |
+| Робот | Демонстрация | Видео на YouTube |
+|-------|--------------|----------------|
+| **KUKA iiwa14** | <video src="https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/kuka-iiwa14/kuka_demo.mp4" controls></video> | [Смотреть](https://youtu.be/U0jLNqwuZgs) |
+| **Universal Robots UR5e** | <video src="https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/ur5e/ur5e_demo.mp4" controls></video> | [Смотреть](https://youtu.be/xK5pJgHGtVE) |
+| **Franka FR3** | <video src="https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/fr3/fr3_demo.mp4" controls></video> | [Смотреть](https://youtu.be/FXCSatCztHg) |
 
 
 Для запуска демонстрации выполните следующие команды:
