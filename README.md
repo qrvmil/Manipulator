@@ -4,6 +4,15 @@
 
 
 ## Демонстрация работы
+
+| Робот | Демонстрация |
+|-------|--------------|
+| **KUKA iiwa14** | [![KUKA iiwa14 Demo](https://github.com/qrvmil/Manipulator/blob/main/demo/simple_movement/kuka_demo.gif)](https://youtu.be/U0jLNqwuZgs) |
+| **Universal Robots UR5e** | [![UR5e Demo](https://github.com/qrvmil/Manipulator/blob/main/demo/simple_movement/ur5e.gif)](https://youtu.be/xK5pJgHGtVE) |
+| **Franka FR3** | [![FR3 Demo](https://github.com/qrvmil/Manipulator/blob/main/demo/simple_movement/fr3_demo.gif)](https://youtu.be/FXCSatCztHg) |
+
+
+
 | Робот | Демонстрация | Видео на YouTube |
 |-------|--------------|----------------|
 | **KUKA iiwa14** | ![]("https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/kuka-iiwa14/kuka_demo.gif") | [Смотреть](https://youtu.be/U0jLNqwuZgs) |
