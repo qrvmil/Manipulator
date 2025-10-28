@@ -2,7 +2,9 @@
 
 Проект по планированию движения роботов-манипуляторов с использованием алгоритмов **RRT (Rapidly-exploring Random Tree)** и **RRT*** в симуляторе MuJoCo.
 
-[![Watch the video](https://img.youtube.com/vi/U0jLNqwuZgs/maxresdefault.jpg)](https://youtu.be/U0jLNqwuZgs)
+<video width="320" height="240" controls>
+  <source src="https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/kuka-iiwa14/kuka_demo_quick.mp4" type="video/mp4" />
+</video>
 
 ## Демонстрация работы
 | Робот | Демонстрация | Видео на YouTube |
