@@ -5,6 +5,10 @@
 
 ## Демонстрация работы
 
+<video width="320" height="240" controls>
+  <source src="https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/ur5e/ur5e.mp4" type="video/mp4" />
+</video>
+
 | Робот | Демонстрация |
 |-------|--------------|
 | **KUKA iiwa14** | [![KUKA iiwa14 Demo](https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/kuka-iiwa14/kuka_demo_quick_2.gif)](https://youtu.be/U0jLNqwuZgs) |
