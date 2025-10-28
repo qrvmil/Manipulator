@@ -2,6 +2,7 @@
 
 Проект по планированию движения роботов-манипуляторов с использованием алгоритмов **RRT (Rapidly-exploring Random Tree)** и **RRT*** в симуляторе MuJoCo.
 
+[![Watch the video]](https://youtu.be/U0jLNqwuZgs)
 
 ## Демонстрация работы
 | Робот | Демонстрация | Видео на YouTube |
