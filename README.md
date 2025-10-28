@@ -8,7 +8,7 @@
 | Робот | Демонстрация |
 |-------|--------------|
 | **KUKA iiwa14** | [![KUKA iiwa14 Demo](https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/kuka-iiwa14/kuka_demo_quick_2.gif)](https://youtu.be/U0jLNqwuZgs) |
-| **Universal Robots UR5e** | [![UR5e Demo](https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/ur5e/ur5e_demo_quick.gif)](https://youtu.be/xK5pJgHGtVE) |
+| **Universal Robots UR5e** | [![UR5e Demo](https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/ur5e/ur5e_speedup-2.gif)](https://youtu.be/xK5pJgHGtVE) |
 | **Franka FR3** | [![FR3 Demo](https://github.com/qrvmil/Manipulator/blob/main/pipeline/examples/fr3/fr3_demo_quick.gif)](https://youtu.be/FXCSatCztHg) |
 
 
