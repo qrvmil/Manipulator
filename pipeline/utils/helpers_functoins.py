@@ -9,6 +9,35 @@ from simulator.ik.ik_simple import qpos_from_site_pose_simple
 
 import numpy as np
 
+GEOM_TYPES = {v: k for k, v in mujoco.mjtGeom.__members__.items()}  # обратный словарь, чтобы печатать тип
+
+def geom_info(model, geom_id):
+    name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+    if name is None:
+        name = f"geom#{geom_id}"
+    body_id = model.geom_bodyid[geom_id]
+    body_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, body_id) or f"body#{body_id}"
+    gtype = GEOM_TYPES[model.geom_type[geom_id]]  # строка типа, например 'mjGEOM_BOX'
+    size = model.geom_size[3*geom_id:3*(geom_id+1)]
+    return dict(id=geom_id, name=name, body_id=body_id, body_name=body_name, type=gtype, size=tuple(size))
+
+def print_robot_contacts(model, data, robot_geom_ids):
+    if data.ncon == 0:
+        print("Контактов нет.")
+        return
+    for i in range(data.ncon):
+        c = data.contact[i]
+        g1, g2 = int(c.geom1), int(c.geom2)
+        if (g1 in robot_geom_ids) or (g2 in robot_geom_ids):
+            a = geom_info(model, g1)
+            b = geom_info(model, g2)
+            # кто из них робот?
+            role = ("ROBOT" if g1 in robot_geom_ids else "WORLD/OTHER",
+                    "ROBOT" if g2 in robot_geom_ids else "WORLD/OTHER")
+            print(f"[contact #{i}] dist={c.dist:.6f}")
+            print(f"  geom1 ({role[0]}): id={a['id']}, {a['name']} | body={a['body_name']} | type={a['type']} | size={a['size']}")
+            print(f"  geom2 ({role[1]}): id={b['id']}, {b['name']} | body={b['body_name']} | type={b['type']} | size={b['size']}")
+
 # THIS FUNC IS JUST FOR TESTING, DO NOT USE IT IN THE PIPELINE
 def find_multiple_ik_solutions(model, data, site_name, target_pos, joint_indices, 
                                num_attempts=100, tol=1e-6, max_steps=500, step_size=0.01):
@@ -161,6 +190,7 @@ def is_collision_free_q(model, data, q, robot_geom_ids, joint_indices):
         geom2_id = contact.geom2
         
         if geom1_id in robot_geom_ids or geom2_id in robot_geom_ids:
+            print_robot_contacts(model, data, robot_geom_ids)
             collision_detected = True
             break
 

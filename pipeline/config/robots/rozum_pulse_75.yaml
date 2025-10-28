@@ -1,0 +1,41 @@
+name: "rozum_pulse_75"
+dof: 6  # Количество степеней свободы
+joint_indices: [0, 1, 2, 3, 4, 5]  # Индексы суставов
+# joint_limits:  # Ограничения суставов [min, max] в радианах. пример ниже:
+#   - [-6.28, 6.28]
+#   - [-0.610865, 3.76991]
+#   - [-2.79253, 2.79253]
+#   - [-4.41568, 4.38078]
+#   - [-6.28, 6.28]
+#   - [-6.28, 6.28]
+
+joint_limits:
+  - [-6.28319, 6.28319]   # Joint 1: ±170°
+  - [-6.28319, 6.28319]     # Joint 2: ±120°  
+  - [-3.1415, 3.1415]   # Joint 3: ±175°
+  - [-6.28319, 6.28319]     # Joint 4: ±120°
+  - [-6.28319, 6.28319]   # Joint 5: ±170°
+  - [-6.28319, 6.28319]     # Joint 6: ±120°
+
+attachment_site: "attachment_site"  # Имя сайта end-effector'а в MuJoCo
+robot_base: "base"    
+
+mujoco:
+  default_scene: "simulator/models/rozum_pulse_75/scene.xml"
+
+ik_params:
+  tolerance: 1e-3      
+  max_steps: 500      
+  step_size: 0.005
+  repeat_times: 700     # Количество попыток найти разные IK решения     
+  # orientation: [0.0, 1.0, 0.0, 0.0]  # Закомментировано - ориентация делает IK нерешаемым для многих позиций  
+
+default_planning:
+  algorithm: "rrt_star"
+  rewire_count: 15
+  goal_radius: 0.05        # Увеличен для более быстрого достижения цели
+  goal_bias: 0.5          # Увеличен для более направленного поиска
+  max_iterations: 20000
+  step_size: 0.15         # Увеличен для более быстрого роста дерева
+  sampling_frequency: 5
+  stop_if_reached: true   # Остановка при достижении первой цели

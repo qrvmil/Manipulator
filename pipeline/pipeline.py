@@ -118,7 +118,6 @@ class Pipeline:
         model_copy = mujoco.MjModel.from_xml_path(str(scene_path))
         data_copy = mujoco.MjData(model_copy)
         
-        
         data_copy.qpos[self.robot_config['joint_indices']] = start_pose
         mujoco.mj_forward(model_copy, data_copy)
         
@@ -269,7 +268,7 @@ class Pipeline:
             viewer.sync()
             time.sleep(0.2)
             
-            step_delay = 0.002      
+            step_delay = 0.002   
             
             joint_indices = self.robot_config['joint_indices']
             
@@ -278,8 +277,8 @@ class Pipeline:
                 
                 self.data.ctrl[joint_indices] = target_point
                 
-                target_tolerance = 0.05  
-                max_wait_steps = 500     
+                target_tolerance = 0.02  
+                max_wait_steps = 700
                 check_frequency = 10     
                 
                 step_count = 0
@@ -305,7 +304,7 @@ class Pipeline:
                     time.sleep(0.01)
             except KeyboardInterrupt:
                 print("Done")
-                print("FINAL CARTESIAN POSITION: ", forward_kinematics(self.model, path[-1], self.robot_config['joint_indices'], self.robot_config['attachment_site'])[0])
+                print("FINAL CARTESIAN POSITION: ", forward_kinematics(self.model, self.data.qpos[:6], self.robot_config['joint_indices'], self.robot_config['attachment_site'])[0])
                 print("FINAL JOINTS: ", self.data.qpos[self.robot_config['joint_indices']])
                 self._cleanup_temp_files()
     
